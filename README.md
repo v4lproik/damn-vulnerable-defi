@@ -15,3 +15,6 @@ Visit [damnvulnerabledefi.xyz](https://damnvulnerabledefi.xyz)
 All Solidity code, practices and patterns in this repository are DAMN VULNERABLE and for educational purposes only.
 
 DO NOT USE IN PRODUCTION.
+
+## Solutions (WIP)
+A solution for each one of the challenges can be found [here](https://github.com/v4lproik/damn-vulnerable-defi/blob/master/SOLUTION.md)
