@@ -50,7 +50,34 @@ We could imagine a smart contract implementing this single line of code:
 ```solidity
 await this.token.transfer(<<smart_contract_address>>, 0.0001);
 ```
-#### Implementation:
-It can be found [here](https://github.com/v4lproik/damn-vulnerable-defi/blob/master/test/unstoppable/unstoppable.challenge.js).
+#### [Click here for code implementation](https://github.com/v4lproik/damn-vulnerable-defi/blob/master/test/unstoppable/unstoppable.challenge.js)
 
+### 2. [Naive receiver](https://www.damnvulnerabledefi.xyz/challenges/2.html)
+> As described in the challenge description, the goal of this challenge is to drain all the ETH funds from the user's contract.
+#### _Train of thoughts:
+After looking at the code, it seems to be a pretty straightforward synchronous workflow which involves two smart contracts:
+--> flashLoan -> receiveEther.
+Let's look at the two parameters of the entry point function of our workflow.
+```solidity
+function flashLoan(address borrower, uint256 borrowAmount)
+```
+There's no check/condition related to the variable borrower. A contract that allows any address should immediately draw your attention.
+```solidity
+require(balanceBefore >= borrowAmount, "Not enough ETH in pool");
+```
+There's only one condition related to the variable borrowAmount. It only has to be equal or bigger than the balance of the smart contract address. As it is an unsigned integer, no negative value can be accepted, obviously. However there's no condition rejecting 0 as a value. Slightly uncommon for a loan...
 
+Back to reading the code, flashLoad then calls receiveEther passing the amount of eth asked by the borrower as well as the value of the fixed fee that needs to be paid by the borrower once the flash loan gets paid back. Same as before, let's look at the entry points of the second smart contract function and see how they are manipulated.
+```solidity
+function receiveEther(uint256 fee) public payable
+```
+This smart contract cannot be called externally and the only condition being made is:
+```solidity
+require(msg.sender == pool, "Sender must be pool");
+```
+Basically anyone can be a pool, there's no proper check towards who specifically made the call. Then the function triggers the business logic related to the flash load and calls back the flashLoan function calculating the amount of eth needed to be paid back following this principle:
+```solidity
+uint256 amountToBeRepaid = msg.value + fee;
+```
+Once again, still no condition regarding the amount being borrowed. To sum it all up we can borrow 0 eth and there's an authorization flaw between the smart contracts call. An attacker can create an Ethereum wallet with 0 eth and then simply calls the flashLoan function with the victim's wallet address and a borrow amount of 0 eth. The transaction fee - constant fee of 1 eth - will then be returned to the flashLoan function allowing the attacker to drain 1 eth per flash load call.
+#### [Click here for code implementation](https://github.com/v4lproik/damn-vulnerable-defi/blob/master/test/naive-receiver/naive-receiver.challenge.js)
